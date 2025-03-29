@@ -1,0 +1,21 @@
+# Dependencies
+# wget parallel pzip mawk duckdb
+
+Parse all of Pubchem and get a set of fields. Convert into parquet and compare to JUMP
+#+begin_src shell
+  # Pull pubchem data from ftp server
+  wget -r ftp://ftp.ncbi.nlm.nih.gov/pubchem/Compound/CURRENT-Full/XML
+
+  cd ftp.ncbi.nlm.nih.gov/pubchem/Compound/CURRENT-Full/XML
+
+  # Extract zip
+  parallel pzip -d | *.gz
+
+  # Run this awk script to extract fields of interest
+  find . -name "*xml" | parallel --verbose --results out 'mawk -F \'[<>]\' -v OFS="," -f fetch.awk' &| less
+
+  # Merge based on InChiKeys
+  duckdb -c "COPY (SELECT *,((from_hex(fingerprint)::BITSTRING)::VARCHAR)[33:-8] FROM (SELECT Metadata_JCP2022,Metadata_InChIKey FROM 'https://github.com/jump-cellpainting/datasets/raw/refs/heads/main/metadata/compound.csv.gz') A LEFT JOIN (SELECT *, FROM read_csv('out/1/*/stdout') ) B ON A.Metadata_InChIKey = B.InChIKey) TO 'table.parquet' (FORMAT parquet, COMPRESSION zstd)"
+
+  # merge columns
+  #+end_src
