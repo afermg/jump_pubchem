@@ -14,8 +14,14 @@ Parse all of Pubchem and get a set of fields. Convert into parquet and compare t
   # Run this awk script to extract fields of interest
   find . -name "*xml" | parallel --verbose --results out 'mawk -F \'[<>]\' -v OFS="," -f fetch.awk' &| less
 
-  # Merge based on InChiKeys
-  duckdb -c "COPY (SELECT *,((from_hex(fingerprint)::BITSTRING)::VARCHAR)[33:-8] FROM (SELECT Metadata_JCP2022,Metadata_InChIKey FROM 'https://github.com/jump-cellpainting/datasets/raw/refs/heads/main/metadata/compound.csv.gz') A LEFT JOIN (SELECT *, FROM read_csv('out/1/*/stdout') ) B ON A.Metadata_InChIKey = B.InChIKey) TO 'table.parquet' (FORMAT parquet, COMPRESSION zstd)"
+  # Merge based on InChiKeys, convert the (hex) fingerprint to bitstrings and remove prefix (4 bytes) and suffix (7 bits)  
+  # based on the specification
+  
+  mkdir -p data
+  duckdb -c "COPY (SELECT *,((from_hex(fingerprint)::BITSTR AS fingerprint FROM (SELECT Metadata_JCP2022,Metadata_InChIKey FROM 'https://github.com/jump-cellpainting/datasets/raw/refs/heads/main/metadata/compound.csv.gz') A LEFT JOIN (SELECT *, FROM read_csv('out/1/*/stdout') ) B ON A.Metadata_InChIKey = B.InChIKey) TO 'data/table.parquet' (FORMAT parquet, COMPRESSION zstd)"
 
-  # merge columns
   #+end_src
+
+  Additional notes:
+  - I am not putting marimo as a dependency despite the marimo notebook at the root because ideally we want to make it an isolated one.
+  - There is an issue with the httpfs extension in WASM notebooks, so I am shipping the script with the data for now ([[https://github.com/marimo-team/marimo/issues/4308][issue]]).
