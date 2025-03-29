@@ -28,5 +28,5 @@ I use Nix to manage dependencies to pull the relevant data and delegate the inte
 - Interface: marimo, but can be run on the browser.
   
 ** Additional notes:
-- I am not putting marimo as a dependency despite the marimo notebook at the root because ideally we want to make it an isolated one.
+- Marimo is not a dependency despite the notebook at the root because ideally we want an isolated WASM website.
 - There is an issue with the httpfs extension in WASM notebooks, so I am shipping the script with the data for now ([[https://github.com/marimo-team/marimo/issues/4308][issue]]).
