@@ -16,7 +16,7 @@ Parse all of Pubchem and get a set of fields. Convert into parquet and compare t
   # Merge based on InChiKeys, convert the (hex) fingerprint to bitstrings and remove prefix (4 bytes) and suffix (7 bits)  
   # based on the specification
 
-  duckdb -c "INSTALL httpfs; LOAD httpfs; COPY (SELECT *,((from_hex(fingerprint)::BITSTR AS fingerprint FROM (SELECT Metadata_JCP2022,Metadata_InChIKey FROM 'https://github.com/jump-cellpainting/datasets/raw/refs/heads/main/metadata/compound.csv.gz') A LEFT JOIN (SELECT *, FROM read_csv('out/1/*/stdout') ) B ON A.Metadata_InChIKey = B.InChIKey) TO 'table.parquet' (FORMAT parquet, COMPRESSION zstd)"
+  duckdb -c "INSTALL httpfs; LOAD httpfs; COPY (SELECT * EXCLUDE(Metadata_InChIKey),fingerprint AS fingerprint FROM (SELECT Metadata_JCP2022,Metadata_InChIKey FROM 'https://github.com/jump-cellpainting/datasets/raw/refs/heads/main/metadata/compound.csv.gz') A LEFT JOIN (SELECT *, FROM read_csv('out/1/*/stdout') ) B ON A.Metadata_InChIKey = B.InChIKey) TO 'table.parquet' (FORMAT parquet, COMPRESSION zstd)"
   
   mv table.parquet ../../../../data
   #+end_src
