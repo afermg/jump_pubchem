@@ -2,12 +2,9 @@
 Parse all of Pubchem and get a set of fields. Convert into parquet and compare to JUMP
 #+begin_src shell
   # Pull pubchem data from ftp server
-  mkdir -p 
   wget -r ftp://ftp.ncbi.nlm.nih.gov/pubchem/Compound/CURRENT-Full/XML
   cd ftp.ncbi.nlm.nih.gov/pubchem/Compound/CURRENT-Full/XML
   #+end_src
-
-  #+RESULTS:
 
   Extract zip
 #+begin_src shell
@@ -18,20 +15,20 @@ Parse all of Pubchem and get a set of fields. Convert into parquet and compare t
   Select fields of interest using fetch.awk script
 #+begin_src shell
   # Run this awk script to extract fields of interest
-  find . -name "*xml" | parallel --verbose --results out '../../../../mawk -F \'[<>]\' -v OFS="," -f fetch.awk' &| less
-
+  REPO_LOCATION=""
+  find . -name "*xml" | parallel --verbose --results out "../.mawk -F \'[<>]\' -v OFS="," -f ~/${REPO_LOCATION}/fetch.awk" 
   #+end_src
   
   Merge based on InChiKeys, convert the (hex) fingerprint to bitstrings and remove prefix (4 bytes) and suffix (7 bits)  
   based on the specification
 #+begin_src shell
-  duckdb -c "INSTALL httpfs; LOAD httpfs; COPY (SELECT * EXCLUDE(Metadata_InChIKey),fingerprint AS fingerprint FROM (SELECT Metadata_JCP2022,Metadata_InChIKey FROM 'https://github.com/jump-cellpainting/datasets/raw/refs/heads/main/metadata/compound.csv.gz') A LEFT JOIN (SELECT *, FROM read_csv('out/1/*/stdout')) B ON A.Metadata_InChIKey = B.InChIKey) TO 'table.parquet' (FORMAT parquet, COMPRESSION zstd)"
-  
-  mv table.parquet ../../../../data
+  DATA_DIR=${REPO_LOCATION}/data
+  mkdir -p $DATA_DIR
+  duckdb -c "COPY (FROM read_csv('out/1/*/stdout') TO '${DATA_DIR}/full_pubchem.parquet' (FORMAT parquet, COMPRESSION zstd)"
+  duckdb -c "INSTALL httpfs; LOAD httpfs; COPY (SELECT * EXCLUDE(Metadata_InChIKey),fingerprint AS fingerprint FROM (SELECT Metadata_JCP2022,Metadata_InChIKey FROM 'https://github.com/jump-cellpainting/datasets/raw/refs/heads/main/metadata/compound.csv.gz') A LEFT JOIN (FROM '${DATA_DIR}/full_pubchem.parquet')) B ON A.Metadata_InChIKey = B.InChIKey) TO '${DATA_DIR}/table.parquet' (FORMAT parquet, COMPRESSION zstd)"
+
   #+end_src
 
-  #+RESULTS:
-  
 ** Dependencies
 I use Nix to manage dependencies to pull the relevant data and delegate the interface to a Marimo WASM notebook.
 
