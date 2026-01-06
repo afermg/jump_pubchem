@@ -4,22 +4,33 @@ Parse all of Pubchem and get a set of fields. Convert into parquet and compare t
   # Pull pubchem data from ftp server
   mkdir -p 
   wget -r ftp://ftp.ncbi.nlm.nih.gov/pubchem/Compound/CURRENT-Full/XML
-
   cd ftp.ncbi.nlm.nih.gov/pubchem/Compound/CURRENT-Full/XML
+  #+end_src
 
+  #+RESULTS:
+
+  Extract zip
+#+begin_src shell
   # Extract zip
   parallel pzip -d | *.gz
-
+  #+end_src
+  
+  Select fields of interest using fetch.awk script
+#+begin_src shell
   # Run this awk script to extract fields of interest
   find . -name "*xml" | parallel --verbose --results out '../../../../mawk -F \'[<>]\' -v OFS="," -f fetch.awk' &| less
 
-  # Merge based on InChiKeys, convert the (hex) fingerprint to bitstrings and remove prefix (4 bytes) and suffix (7 bits)  
-  # based on the specification
-
-  duckdb -c "INSTALL httpfs; LOAD httpfs; COPY (SELECT * EXCLUDE(Metadata_InChIKey),fingerprint AS fingerprint FROM (SELECT Metadata_JCP2022,Metadata_InChIKey FROM 'https://github.com/jump-cellpainting/datasets/raw/refs/heads/main/metadata/compound.csv.gz') A LEFT JOIN (SELECT *, FROM read_csv('out/1/*/stdout') ) B ON A.Metadata_InChIKey = B.InChIKey) TO 'table.parquet' (FORMAT parquet, COMPRESSION zstd)"
+  #+end_src
+  
+  Merge based on InChiKeys, convert the (hex) fingerprint to bitstrings and remove prefix (4 bytes) and suffix (7 bits)  
+  based on the specification
+#+begin_src shell
+  duckdb -c "INSTALL httpfs; LOAD httpfs; COPY (SELECT * EXCLUDE(Metadata_InChIKey),fingerprint AS fingerprint FROM (SELECT Metadata_JCP2022,Metadata_InChIKey FROM 'https://github.com/jump-cellpainting/datasets/raw/refs/heads/main/metadata/compound.csv.gz') A LEFT JOIN (SELECT *, FROM read_csv('out/1/*/stdout')) B ON A.Metadata_InChIKey = B.InChIKey) TO 'table.parquet' (FORMAT parquet, COMPRESSION zstd)"
   
   mv table.parquet ../../../../data
   #+end_src
+
+  #+RESULTS:
   
 ** Dependencies
 I use Nix to manage dependencies to pull the relevant data and delegate the interface to a Marimo WASM notebook.

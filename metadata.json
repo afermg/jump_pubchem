@@ -1,0 +1,11 @@
+{"metadata": {
+    "title": "Mappers from JUMP to Pubchem and from pubchem to external databases.",
+    "creators": [
+        {
+            "name": "Alán F. Muñoz"
+        }
+    ],
+    "description":"See https://github.com/afermg/jump_pubchem for details.",
+    "upload_type": "dataset",
+    "access_right": "open"
+}}
